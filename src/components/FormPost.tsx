@@ -1,15 +1,36 @@
 "use client";
 
-import { FormInputPost } from "@/types";
+import axios from "axios";
 import { FC } from "react";
+import { FormInputPost } from "@/types";
+import { useQuery } from "@tanstack/react-query";
 import { useForm, SubmitHandler } from "react-hook-form";
+import { Tag } from "@prisma/client";
 
 interface FormPostProps {
   submit: SubmitHandler<FormInputPost>;
   isEditing: boolean;
 }
+
 const FormPost: FC<FormPostProps> = ({ submit, isEditing }) => {
   const { register, handleSubmit } = useForm<FormInputPost>();
+  const {
+    data: dataTags,
+    isLoading: isLoadingTags,
+    error: tagsError,
+  } = useQuery<Tag[]>({
+    queryKey: ["tags"],
+    queryFn: async () => {
+      try {
+        const response = await axios.get("/api/tags");
+        return response.data;
+      } catch (error) {
+        console.error("Error fetching tags:", error);
+        throw error; // Rethrow the error for React Query to handle
+      }
+    },
+  });
+  console.log("🚀 ~ file: FormPost.tsx:22 ~ dataTags:", dataTags);
 
   return (
     <form
@@ -27,18 +48,24 @@ const FormPost: FC<FormPostProps> = ({ submit, isEditing }) => {
         {...register("content", { required: true })}
         placeholder="Post content..."
       ></textarea>
-      <select
-        className="select select-bordered w-full max-w-lg"
-        defaultValue={""}
-        {...register("tag", { required: true })}
-      >
-        <option disabled value={""}>
-          Select tags
-        </option>
-        <option>Sport</option>
-        <option>Technology</option>
-        <option>Social</option>
-      </select>
+      {isLoadingTags ? (
+        <select
+          className="select select-bordered w-full max-w-lg"
+          defaultValue={""}
+          {...register("tag", { required: true })}
+        >
+          <option disabled value={""}>
+            Select tags
+          </option>
+          {/* {dataTags?.map((item: any) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))} */}
+        </select>
+      ) : (
+        "Loading..."
+      )}
       <button type="submit" className="btn btn-primary w-full max-w-lg">
         {isEditing ? "Update" : "Create"}
       </button>
